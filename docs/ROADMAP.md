@@ -45,13 +45,46 @@ Discussions + Issues.
 
 ## v0.2.0 — feature follow-up
 
-Themes (subject to community feedback):
+### Reviewer agent + confidence-based routing (v0.2.0 headline)
+
+**Empirical source:** [DISC-12](../.conductor/discoveries.md) — clip-forge build sessions showed an adversarial reviewer outperformed user-direct decision-making in **6/6 measured cases**.
+
+**Design.** Sub-agents that return decision-relevant output grow a `confidence` field (0.0–1.0) + `confidence_reasoning`. The conductor routes by confidence:
+
+```
+confidence ≥ 0.9    → accept directly, log to decisions.md
+confidence 0.6–0.89 → dispatch reviewer for adversarial check
+confidence <  0.6   → escalate to user (pause-gate)
+```
+
+The reviewer is a new agent (`agents/reviewer.md`) with strictly read-only tools. Job: analyze the specialist's proposal, identify blind spots (sunk-cost bias, confirmation bias, scope creep, environmental assumptions per DISC-11), recommend accept / push-back / escalate.
+
+**Adds:**
+
+- `agents/reviewer.md` — adversarial review specialist.
+- `agents/*.md` schema update — required `confidence` field on decision outputs.
+- `agents/conductor.md` — decision-routing section referencing the reviewer + confidence thresholds.
+- `skills/execute/SKILL.md` — two-stage decision flow.
+- `bin/lib/confidence-router.mjs` — routing helper invoked by execute.
+- `CLAUDE.md` — new section documenting the empirically-validated default.
+- `tests/lib/confidence-router.test.mjs` — 5+ tests covering each routing threshold + edge cases.
+
+**Hard rule:** the reviewer does NOT have authority over irreversible actions. The 3-AND pause-gate condition (irreversible AND non-factual AND no clear technical winner) stays invariant. The reviewer reduces user pause-gates for REVERSIBLE non-factual calls; irreversible always escalates regardless of reviewer confidence.
+
+**Why not timeout-based interrupts?** Claude Code's `AskUserQuestion` has no timeout parameter. Workarounds (notify + grace period) are UX-clumsy in a terminal session. Sub-agent delegation fits the existing conductor dispatch architecture cleanly.
+
+**Why this is NOT "AI > human":** the user IS the decision-maker. The reviewer is a specialized fresh perspective that the fatigued multitasking perspective lacks. The reviewer cannot pull rank — its job is to surface blind spots, not to overrule. User retains final authority via the escalation path.
+
+**Estimated effort:** 1–2 sessions. Test discipline: the reviewer agent itself should be reviewed by another reviewer pass (meta-self-test) before tagging v0.2.0 — exercises the role's own claim.
+
+### Other themes (subject to community feedback)
 
 - **Multi-project sessions** — currently the conductor assumes one project per session. Spec how to support multiple `.conductor/` dirs.
 - **Resume from any phase** — `/conductor:resume` currently routes by `phase`. Add `--from <phase-id>` to explicitly rewind.
 - **Sub-agent retry budgets** — execute's "3 consecutive verifier failures" is the only hard stop. Add per-phase configurable retry caps.
 - **Templates registry** — `templates/` is local; consider a URL-fetch mechanism so plugins can ship custom plan/review templates.
-- **Token-guard refinement** — current model: flat 30k per Agent dispatch. Refine with model-aware estimates (Opus vs Sonnet vs Haiku consume context differently).
+- **Token-guard refinement** — role-aware `PER_DISPATCH` estimator (W-7 from v0.1.3) actually lands in v0.1.4 if implementable; otherwise it folds into v0.2.0.
+- **Auditor Layer E — Environmental variance** (DISC-11 follow-up) — sample variants the auditor must consider per audit: model tier (`[1m]` vs not), OS path conventions, git remote present/absent, hook input schema drift.
 
 ## v1.0 — API stability
 

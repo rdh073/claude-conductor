@@ -217,3 +217,46 @@ Non-actions (strengths to preserve):
 2. The conductor's own .conductor/ directory should eventually contain the full state file set after v0.1.1's first dogfood-against-itself run.
 
 **Action for v0.1.1:** Run `/conductor:start --target ./claude-conductor` as the v0.1.1 work itself. Layer D grade in the v0.1.1 self-audit should rise to A- or B+. If it does, the bootstrap paradox is closed.
+
+---
+
+## DISC-12 — Adversarial reviewer pattern outperforms user-direct decisions
+
+**Date:** 2026-05-20T03:00:00Z
+**Source:** User observation during v0.1.3 session, retrospecting clip-forge build (rdh073, 2026)
+**Severity:** STRATEGIC — informs v0.2.0 architecture (headline feature)
+
+**Finding:** Across the clip-forge build sessions, user-driven decisions were paste-reviewed by an independent second-Claude perspective. The reviewer's recommendations were adopted in **6/6 measured cases** and led to demonstrably better outcomes:
+
+| Decision | Initial proposal | Reviewer override | Outcome |
+| :--- | :--- | :--- | :--- |
+| Library v0.2.0 | `@vladmandic/human` (Claude rec) | Ultraface (engine pin concern) | ✅ Engine pin avoided, 12× faster |
+| Phase 2D crop | `sendcmd` primary | B-as-primary spec | ⚠️→✅ `sendcmd` later found broken upstream |
+| PFLD model | 15-min Apache hunt | Ship `cunjian` with mitigation | ✅ Momentum preserved |
+| v0.1.2 fix | Role-aware estimator (~80 LOC) | Simple escape hatch (~10 LOC) | ✅ Simple shipped; v0.1.3 auto-detect later supersedes both |
+| Phase 7 dogfood | Trivial vs modest plugin | Trivial (variable control) | ✅ 7 discoveries surfaced |
+| v0.1.0 strategy | Ship vs block | Ship-with-disclosure | ✅ Truth-disclosure pattern recognized + reused |
+
+**Why it works:**
+
+- Reviewer has narrow scope (decision review only) vs user's full session cognitive load.
+- Reviewer is fresh per decision; user accumulates fatigue across a long session.
+- Reviewer has dedicated tokens for reasoning depth; user makes ~30-second calls under pressure.
+- Reviewer is adversarial by construction; user is committed to prior choices (sunk-cost bias).
+- User retains final authority; reviewer provides decision-input quality enhancement.
+
+**Why this is NOT "AI > human":** The user IS the decision-maker. The reviewer is a specialized fresh perspective that the fatigued multitasking perspective lacks. The reviewer cannot pull rank — its job is to surface blind spots, not to overrule.
+
+**Relationship to DISC-11:** DISC-11 named the pattern "empirical user testing surfaces what same-context audit cannot." DISC-12 names the inverse + complement: "a fresh narrow-scope reviewer surfaces what fatigued broad-scope decision-makers miss." Both reduce to: **scope-bounded fresh attention beats unbounded accumulated attention for high-stakes calls.**
+
+**Action for v0.2.0:**
+
+1. Add `agents/reviewer.md` — adversarial review specialist (read-only tools, narrow remit).
+2. Two-stage decision flow: specialist proposes → reviewer checks → conductor accepts or escalates.
+3. Sub-agent decision outputs grow a `confidence` field (0.0–1.0) + `confidence_reasoning`. Conductor routes by threshold (see ROADMAP v0.2.0 § Reviewer agent + confidence-based routing).
+4. Document the empirically-validated default in `CLAUDE.md` (new section) and `agents/conductor.md`'s dispatch contract.
+5. CHANGELOG v0.2.0: headline feature.
+
+**Hard limit:** the reviewer does NOT have authority over irreversible actions. The 3-AND pause-gate condition (irreversible AND non-factual AND no clear technical winner) stays invariant. Reviewer reduces user pause-gates for REVERSIBLE non-factual calls; irreversible always escalates regardless of reviewer's confidence.
+
+**Not for v0.1.x:** This is feature scope, not patch scope. Strict single-concern discipline holds — patches close CRs; v0.2.0 ships the headline feature with its own deliberate phase plan.
