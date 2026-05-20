@@ -5,7 +5,7 @@ running it against itself. Append-only. Each discovery should override or amend
 the spec where it surfaces — that's the whole point of `discoveries.md` per
 CLAUDE.md.
 
-Linked to dogfood session: `/home/xtrzy/dogfood/hello-world-plugin-test/` (Phase 7).
+Linked to dogfood session: `/home/<user>/dogfood/hello-world-plugin-test/` (Phase 7).
 
 ---
 

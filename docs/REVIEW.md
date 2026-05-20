@@ -109,7 +109,7 @@ Timestamp: 2026-05-20T00:57:44Z
 ## Verification commands run
 
 ```bash
-claude plugin validate /home/xtrzy/playground/plugins/claude-conductor-dev/claude-conductor
+claude plugin validate /home/<user>/playground/plugins/claude-conductor-dev/claude-conductor
 # → Validation passed with warnings (CLAUDE.md at root, already documented)
 
 for f in bin/*.mjs bin/lib/*.mjs; do node --check "$f"; done

@@ -94,3 +94,22 @@ Reason: This session is already substantial (~6 phases of substantial work + 1 s
 Reversibility: N/A (decision affects when patches land, not whether)
 
 Anchored to: docs/REVIEW.md (audit output), v0.1.0 tag (immutable), discussions/1 (community advisory)
+
+---
+
+## 2026-05-20T01:10:00Z — D7: CR-4 privacy leak found in shipped state (immediate patch + system fix)
+Git: main @ 33ee21f (post Phase 9, pre v0.1.1)
+
+Context: empirical user finding — STATE.json/brief.json write raw cwd paths, leaking the Linux username (`xtrzy`) to any public repo where the target plugin commits `.conductor/`. v0.1.0 of THIS repo also shipped the leak: `.conductor/discoveries.md` line 8 + `docs/REVIEW.md` line 112 both contained the raw path. Commit body of `113dd82` (Phase 7 dogfood findings) also contains it.
+
+Options considered:
+1. Force-push to rewrite git history (clean repo)
+2. Sanitize on-disk files only, accept commit-history leak as documented residue, ship a v0.1.1 with the proper redactor system
+
+Chosen: Option 2
+
+Reason: Force-pushing rewrites SHAs other tools may have cached (Claude Code installs, gh release, Discussions, the v0.1.0 tag). The leaked content is exactly one path string in one commit body — searchable but not catastrophic. The proper fix (redact-path.mjs + atomic-write wrapper) prevents FUTURE leaks for both this repo and every downstream plugin. Document the residual commit-body leak here; do not unwind the v0.1.0 tag.
+
+Reversibility: locked-in (no force-push) — but the leak surface is bounded to commit `113dd82` body. Future v0.1.1 patches close the leak in shipped state files.
+
+Anchored to: this commit (D7), v0.1.1 release notes, README.md privacy section to be added
