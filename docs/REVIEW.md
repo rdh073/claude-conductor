@@ -162,3 +162,104 @@ WebFetch https://code.claude.com/docs/en/cli-reference
 - **OOS-3: No CI yet.** `.github/workflows/` does not exist. ROADMAP.md v0.1.1 names it. Out of scope for the audit; flagged for the next release.
 - **OOS-4: `node_modules` test surface.** Plugin ships zero npm deps by design (CONTRIBUTING.md confirms). No `package.json` to maintain. This is a strength but means no `npm test` to gate releases; release-manager.md bump-guard 2 ("Tests green") has no command to run today.
 - **OOS-5: Cross-platform PATH search on native Windows.** D5 marks this a known gap. W-3 above is the residue.
+
+---
+
+## CR-4 (added v0.1.1) — Privacy leak in state writes [FIXED]
+
+**Severity:** CRITICAL — already shipped in v0.1.0 public artifacts.
+**Found by:** Empirical user feedback (post-Phase 9 release).
+**File (before fix):** `bin/lib/atomic-write.mjs` wrote JSON objects as-is, including raw `process.cwd()` paths embedded in STATE.json / brief.json by callers.
+
+**Detail:** Pre-v0.1.1, every state-file write preserved raw absolute paths like `/home/alice/proj`. When a target plugin later committed `.conductor/` to a public repo, the Linux/macOS/Windows username leaked. v0.1.0 of THIS repo also shipped the leak: `.conductor/discoveries.md` line 8 and `docs/REVIEW.md` line 112 both contained the development host's path.
+
+**Evidence pre-fix:** `grep -rn "/home/$(whoami)/" .conductor/ docs/` returned hits at the two file locations. Commit `113dd82` body also contained the path — residual leak in git history, documented in `.conductor/decisions.md` D7 (not force-pushed; bounded surface).
+
+**Fix in v0.1.1:**
+
+- `bin/lib/redact-path.mjs` — POSIX + Windows home-dir regex helper (`/home/<user>`, `/Users/<user>`, `C:\Users\<user>`, plus UNC long-path variant `\\?\C:\Users\<user>`).
+- `bin/lib/atomic-write.mjs` — `atomicWriteJSON` now applies `redactObject` by default. Opt-out via `{ skipRedaction: true }` for the rare case where the path IS the legitimate data.
+- `README.md` — new "Privacy & `.conductor/` directory" section documenting the redaction behavior and the recommended `.gitignore` add for target plugins.
+- `templates/plan-template.md` — comment block notes the privacy contract.
+- `tests/lib/redact-path.test.mjs` — 7 unit tests covering linux/mac/windows home dirs, no-op for non-home paths, recursive object walk, non-string values (null/numbers/booleans), and empty objects. All pass.
+- Already-shipped v0.1.0 leak patched in commit `e791bb5` (sed replacement of `/home/<dev-username>/` → `/home/<user>/` in the two affected files).
+
+**Regression test:** `node --test tests/lib/redact-path.test.mjs` — must show 7/7 passing. Also: `grep -rn "/home/$(whoami)\|/Users/$(whoami)" .conductor/ docs/ templates/ README.md` should return zero hits before any release.
+
+**Disclosure note:** The original commit body `113dd82` retains the raw path. Force-pushing to rewrite would invalidate the v0.1.0 tag SHA and any cached marketplace install. Per D7 in `.conductor/decisions.md`, the residue is accepted as bounded; the forward path is sealed.
+
+---
+
+## v0.1.1 re-audit — 2026-05-20T01:50:00Z
+
+**Method:** Inline re-audit (per DISC-5 heuristic — verifying 4 specific CR fixes is deterministic file checks; sub-agent dispatch overhead unjustified). Verification commands listed below.
+
+### TL;DR
+
+- **0** critical (down from 3) · **5-6** warnings (carried over from v0.1.0 audit, mostly unchanged) · **8** nits (carried over) · **10** strengths (8 carried + S-9, S-10 new)
+- Layer scores: A=A- (was B+), B=B+ (was B-), C=B- (was C+), D=C- (unchanged) | **Overall = B- / B** (was C+ / B-)
+- Recommendation: **ship v0.1.1** — Phase 10 marketplace unblock conditions met. Promotion to `latest` waits on community-runner TEST_PROTOCOL passes per the v1.0 checklist.
+
+### Critical resolutions
+
+- ✅ **CR-1 fixed** — `grep -rn "TodoWrite" agents/ skills/` returns 0 hits. Replaced with `TaskCreate, TaskGet, TaskList, TaskUpdate` in `agents/{conductor,engineer}.md` and `skills/{start,execute}/SKILL.md`. `engineer.md` body updated to "Plan with `TaskCreate` if the phase has > 3 steps."
+- ✅ **CR-2 fixed** — `bin/lib/reset-tokens.mjs` ships; `skills/execute/SKILL.md` token-budget section now spells out the two required steps (`/compact` + `node ${CLAUDE_PLUGIN_ROOT}/bin/lib/reset-tokens.mjs`); `bin/token-guard.mjs` comment block updated. Smoke-tested: starting from `running_tokens_estimate: 150000`, the reset brings it to `0` and stamps `last_compact_at`.
+- ✅ **CR-3 fixed** — `agents/auditor.md` frontmatter is now `tools: Read, Write, Edit, Glob, Grep, Bash`. Body's "no source modifications" anti-pattern is intact — only the tool wiring matched the intent.
+- ✅ **CR-4 fixed** — `bin/lib/redact-path.mjs` ships with POSIX + Windows home-dir handling; `bin/lib/atomic-write.mjs` applies `redactObject()` by default; 7 unit tests pass; README carries a Privacy section; template carries a comment block. Latent leaks in test inputs and decisions.md narrative were also swept (see below).
+
+### Layer re-grades
+
+| Layer | Before | After | Why |
+| :--- | :---: | :---: | :--- |
+| A — Architecture | B+ | **A-** | CR-3 closed; remaining note is W-2's half-correct D2 rationale, deferred. |
+| B — Implementation | B- | **B+** | CR-1, CR-2, CR-4 all closed; reset-tokens.mjs and redact-path.mjs are net-new correctness primitives, with tests. Remaining: W-3, W-4, N-3 latent. |
+| C — Documentation | C+ | **B-** | README Privacy section added, atomic-write docstring extended, template carries gitignore note. Remaining: W-6 — 5 `_TODO:_` markers still in README. |
+| D — Self-consistency (meta) | C- | **C-** | Unchanged. v0.1.1 was still patched via mega-prompt + this Claude session, not `/conductor:start --target ./claude-conductor`. Bootstrap paradox (DISC-10) still open. |
+| **Overall** | **C+ / B-** | **B- / B** | Three layers up, one flat. Modest move because Layer D didn't budge. |
+
+### New strengths to preserve
+
+- **S-9 (cleanup-on-touch)** — `atomicWriteJSON` redacts on every write, so any read-modify-write cycle automatically launders pre-v0.1.1 raw paths in existing STATE.json. Smoke test confirmed: a STATE.json with `cwd: "/home/example-user/proj"` came out as `cwd: "/home/<user>/proj"` after `reset-tokens.mjs` ran — CR-2 + CR-4 exercised in one round-trip.
+- **S-10 (testing precedent)** — `tests/lib/redact-path.test.mjs` is the plugin's first test file. OOS-4 from Phase 9 ("no `npm test`") moves from "no path" to "directory established, pattern set." `node --test` + `node:assert/strict`, zero npm deps. New test files for other primitives can follow this template.
+
+### Latent fix during re-audit
+
+Two latent leaks surfaced during the inline re-audit and were patched before v0.1.1 ships:
+
+1. `tests/lib/redact-path.test.mjs` originally used the developer's actual username as test-input strings (`/home/<dev>/foo`). The TEST was correct (it asserted the redactor turned it into `/home/<user>/foo`), but the literal in the source file leaked. Renamed all test inputs to `alice` — tests still pass, leak removed.
+2. `.conductor/decisions.md` D7 narrative explicitly NAMED the leaked username in parentheses. The doc became the leak. Rewrote to "leaking the developer's local username."
+
+After the latent fix: `grep -rn "<dev-username-pattern>" --exclude-dir=.git .` returns **0** hits across all tracked files.
+
+### Verification commands run
+
+```bash
+grep -rn "TodoWrite" agents/ skills/                          # 0 hits
+grep "^tools:" agents/auditor.md                              # contains Read, Write, Edit
+test -f bin/lib/reset-tokens.mjs                              # exists
+test -f bin/lib/redact-path.mjs                               # exists
+grep -c "redactObject" bin/lib/atomic-write.mjs               # 3
+node --check bin/*.mjs bin/lib/*.mjs                          # 10/10 clean
+node --test tests/lib/redact-path.test.mjs                    # 7/7 passing
+claude plugin validate .                                      # passed with documented CLAUDE.md warning
+grep -rn "<dev-username>" --exclude-dir=.git .                # 0 hits
+
+# Round-trip smoke test exercising CR-2 + CR-4 simultaneously:
+# Input STATE.json:  running_tokens_estimate=150000, cwd="/home/example-user/proj"
+# After running:     node bin/lib/reset-tokens.mjs (with CLAUDE_PROJECT_DIR pointing at a tmpdir)
+# Output STATE.json: running_tokens_estimate=0, cwd="/home/<user>/proj", last_compact_at=<ISO>
+```
+
+### Out-of-scope flags still standing
+
+- **OOS-1 — Live runtime test (DISC-3)**: Unchanged. `docs/TEST_PROTOCOL.md` is human-runnable; community testers gate the next promotion.
+- **OOS-2 — Unshipped Phase 1 `bin/*.mjs` scripts**: `verify-github.mjs`, `conductor-init.mjs`, `conductor-status.mjs`, `conductor-decide.mjs`, `bump-version.mjs`. In `docs/ROADMAP.md`.
+- **OOS-3 — No CI yet**: `.github/workflows/` does not exist. v0.1.2 item.
+- **W-1, W-2, W-3, W-4, W-6, N-1 through N-8**: Carried over from v0.1.0 audit; tracked in `docs/ROADMAP.md`.
+
+### Promotion gate
+
+**Phase 10 marketplace submission unblocked** — `audit_count_critical: 0`. Per Phase 9's spec ("Bypass IF audit returns ≥ 3 critical"), v0.1.1 clears the gate.
+
+**Promote to `latest`?** Not yet. Per CLAUDE.md release discipline: "v1.x and above, latest only when the auditor has signed off and the release notes disclose all known gaps." We're at 0.1.1 — `--prerelease` stays on. Move to `latest` happens when 0.x becomes 1.0 per `docs/ROADMAP.md`'s v1.0 checklist.
+

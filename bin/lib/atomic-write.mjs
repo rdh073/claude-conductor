@@ -13,6 +13,7 @@
  */
 
 import { writeFile, rename, unlink } from 'node:fs/promises';
+import { redactObject } from './redact-path.mjs';
 
 function tmpPath(target) {
   return `${target}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
@@ -29,6 +30,16 @@ export async function atomicWriteText(target, text) {
   }
 }
 
-export async function atomicWriteJSON(target, obj) {
-  await atomicWriteText(target, JSON.stringify(obj, null, 2) + '\n');
+/**
+ * atomicWriteJSON — write JSON with home-directory paths redacted by default.
+ *
+ * Per CR-4 (v0.1.1): state-file writes used to leak `/home/<user>/…` paths.
+ * `redactObject` walks the object and rewrites home segments to `<user>`.
+ * Pass `{ skipRedaction: true }` only when the path IS the data (rare —
+ * e.g. logging the absolute path of an error source for debug). Default
+ * is REDACT.
+ */
+export async function atomicWriteJSON(target, obj, opts = {}) {
+  const data = opts.skipRedaction ? obj : redactObject(obj);
+  await atomicWriteText(target, JSON.stringify(data, null, 2) + '\n');
 }

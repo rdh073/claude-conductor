@@ -1,5 +1,11 @@
 <!-- Placeholders use {{double-curly}}. Replace at fill-in time.
-     Leave HTML comments — readers strip them, maintainers don't. -->
+     Leave HTML comments — readers strip them, maintainers don't.
+
+     PRIVACY (v0.1.1+): .conductor/ should be added to your target
+     project's .gitignore as an extra safety layer. The conductor
+     redacts home-directory paths at write time, but a gitignored
+     state dir is the cleanest seal. -->
+
 
 # Plan — {{project-name}}
 

@@ -34,6 +34,28 @@ claude
 /conductor:start
 ```
 
+## Privacy & `.conductor/` directory
+
+When the conductor runs in a target project, it writes state to
+`./.conductor/` (`STATE.json`, `brief.json`, checkpoints, reports).
+
+Pre-v0.1.1, those files wrote raw working-directory paths
+(e.g. `/home/alice/proj`), which leaked Linux/macOS/Windows usernames
+to any public repo where `.conductor/` was committed.
+
+**Since v0.1.1:**
+
+- Path-like strings are automatically redacted at write time to
+  `/home/<user>/...`, `/Users/<user>/...`, or `C:\Users\<user>\...`.
+- For target plugins intended for public commit, **also add
+  `.conductor/` to your `.gitignore`** as an extra safety layer.
+
+**Pre-v0.1.1 state files may contain raw paths.** If you committed
+any `.conductor/STATE.json` or `brief.json` before v0.1.1, audit and
+sanitize. The conductor itself shipped one such leak in v0.1.0 — see
+[CR-4 in docs/REVIEW.md](docs/REVIEW.md) and [decisions.md D7](.conductor/decisions.md)
+for the patch + the residual commit-body note.
+
 ## The 7-step flow
 
 1. **Onboard** — 3-5 questions, saved to `./.conductor/brief.json`

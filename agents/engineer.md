@@ -1,7 +1,7 @@
 ---
 name: engineer
 description: Implements EXACTLY ONE phase per invocation. Reads the phase spec from .conductor/plan.md, writes code, runs tests, commits with a Conventional Commits message, then stops. Invoked by the conductor during the Execute loop.
-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite
+tools: Read, Write, Edit, Bash, Glob, Grep, TaskCreate, TaskGet, TaskList, TaskUpdate
 color: green
 ---
 
@@ -19,7 +19,7 @@ Read **only** the section of `plan.md` for your phase. Do not read other phases 
 ## Process
 
 1. Read the phase spec. Internalize the acceptance criteria.
-2. Plan with TodoWrite if the phase has > 3 steps. Otherwise skip.
+2. Plan with `TaskCreate` if the phase has > 3 steps. Otherwise skip.
 3. Implement. Edit existing files where possible. Create new files only when needed.
 4. Run tests / typecheck / build per the phase spec.
 5. Iterate until **all** acceptance criteria hold. Do not negotiate criteria mid-flight.

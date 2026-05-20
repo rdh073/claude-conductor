@@ -1,6 +1,6 @@
 ---
 description: Loop through plan phases. Dispatch the engineer per phase, run verifier on every claim, decide proceed/retry/escalate per the dispatch contract. The heart of the boomerang.
-allowed-tools: Agent Skill Read Write Edit Bash TodoWrite
+allowed-tools: Agent Skill Read Write Edit Bash TaskCreate TaskGet TaskList TaskUpdate
 ---
 
 # Execute
@@ -9,7 +9,13 @@ For each phase in `./.conductor/plan.md` not marked `[done]`: dispatch engineer,
 
 ## Token budget — check before every dispatch
 
-Per CLAUDE.md: at phase start, estimate cumulative tokens since the last checkpoint. If > 50k, run `/compact` BEFORE dispatching the engineer. Sub-agents always get fresh context, so the budget concern is YOUR main session — keep it lean by pointing at files, not pasting prior chatter.
+Per CLAUDE.md: at phase start, estimate cumulative tokens since the last checkpoint. If > 50k:
+
+1. Run `/compact` in the main session.
+2. Run `bash` `node "${CLAUDE_PLUGIN_ROOT}/bin/lib/reset-tokens.mjs"` to reset `running_tokens_estimate` to 0 in STATE.json.
+3. Then dispatch the next sub-agent.
+
+Both steps are required: without step 2, `bin/token-guard.mjs` keeps incrementing and hard-blocks on the 6th dispatch of the session (CR-2 in docs/REVIEW.md). Sub-agents always get fresh context, so the budget concern is YOUR main session — keep it lean by pointing at files, not pasting prior chatter.
 
 ## Phase loop
 

@@ -5,6 +5,41 @@ All notable changes to `claude-conductor` are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-20
+
+Patch release closing the four CRs from the v0.1.0 self-audit
+(see `docs/REVIEW.md`). Phase 10 marketplace submission gate unblocked
+(`audit_count_critical: 0`).
+
+### Fixed
+
+- **CR-1: `TodoWrite` deprecation drift** — `TodoWrite` was disabled by default in Claude Code v2.1.142+. Four files declared it in their tool whitelists: `agents/conductor.md`, `agents/engineer.md`, `skills/start/SKILL.md`, `skills/execute/SKILL.md`. Replaced with `TaskCreate, TaskGet, TaskList, TaskUpdate`. `engineer.md` body updated to "Plan with `TaskCreate` if the phase has > 3 steps."
+- **CR-2: `token-guard.mjs` increment-without-reset** — `bin/token-guard.mjs` raised `running_tokens_estimate` by 30k per Agent dispatch but no script reset it. Math: 200k × 0.8 / 30k ≈ 5.33 → every 6th dispatch onward was hard-blocked. New `bin/lib/reset-tokens.mjs` script + updated `skills/execute/SKILL.md` token-budget section spell out the two required steps: run `/compact`, then `node ${CLAUDE_PLUGIN_ROOT}/bin/lib/reset-tokens.mjs`. `bin/token-guard.mjs` comment block updated to cross-reference the reset script.
+- **CR-3: `agents/auditor.md` frontmatter missing Write/Edit** — body instructed "Write `docs/REVIEW.md`" but the whitelist omitted Write. Plugin agents use allowlist semantics, so the auditor sub-agent literally could not produce its primary artifact. Added `Write, Edit` to the whitelist. The "modifies no source code" anti-pattern guidance in the body is intact — Write into `docs/REVIEW.md` is documentation, not code.
+- **CR-4: Privacy leak in state writes** — pre-v0.1.1, `STATE.json` and `brief.json` wrote raw home-directory paths (`/home/<dev>/...`, `/Users/<dev>/...`, `C:\Users\<dev>\...`), leaking developer usernames to any public repo where the target plugin committed `.conductor/`. v0.1.0 of THIS repo also shipped the leak in `.conductor/discoveries.md` and `docs/REVIEW.md` — patched first (commit `e791bb5`) before the system fix below.
+
+### Added
+
+- `bin/lib/redact-path.mjs` — POSIX + Windows home-dir redaction helper. Handles `/home/<user>`, `/Users/<user>`, `C:\Users\<user>`, and UNC long-path `\\?\C:\Users\<user>` variants.
+- `bin/lib/atomic-write.mjs` — `atomicWriteJSON` now applies `redactObject()` by default. Pass `{ skipRedaction: true }` to opt out when the path IS the legitimate data (rare).
+- `bin/lib/reset-tokens.mjs` — closes CR-2 by resetting `running_tokens_estimate` to 0 and stamping `last_compact_at`. Side-effect: a read-modify-write cycle also launders any pre-v0.1.1 raw paths in the existing STATE.json (cleanup-on-touch).
+- `tests/lib/redact-path.test.mjs` — 7 unit tests covering linux/mac/windows home dirs, non-home no-op, recursive object walk, non-string preservation, empty object. Run via `node --test tests/lib/redact-path.test.mjs`. First test file in the plugin — establishes the testing pattern (no npm deps, just `node:test` + `node:assert/strict`).
+- `README.md` "Privacy & `.conductor/` directory" section documenting the redaction behavior and the recommended `.gitignore` add for target plugins.
+- `docs/REVIEW.md` CR-4 section + v0.1.1 re-audit section with layer re-grades.
+
+### Documentation
+
+- `templates/plan-template.md` opens with a privacy comment block noting `.conductor/` should be gitignored in target plugins.
+- `bin/token-guard.mjs` comment block updated to cross-reference `bin/lib/reset-tokens.mjs`.
+
+### Known limitations (carried forward)
+
+- **DISC-3 (runtime test gap)** — v0.1.1 was still patched via mega-prompt and direct file edits, not `/conductor:start --target ./claude-conductor`. Layer D meta-grade stays at C-. The bootstrap paradox (`.conductor/discoveries.md` DISC-10) is closed when v0.1.2+ is built via the conductor against itself.
+- **W-1, W-2, W-3, W-4, W-6** — five warnings from the v0.1.0 audit carry forward. Tracked in `docs/ROADMAP.md` for v0.1.2.
+- **Unshipped Phase 1 scripts** — `bin/verify-github.mjs`, `bin/conductor-init.mjs`, `bin/conductor-status.mjs`, `bin/conductor-decide.mjs`, `bin/bump-version.mjs`. Still in `docs/ROADMAP.md`.
+- **No CI** — `.github/workflows/` does not exist. v0.1.2 item.
+- **Residual commit-body leak** — commit `113dd82` body retains the original raw path. Force-push to rewrite would invalidate the v0.1.0 tag and any cached marketplace install; per `.conductor/decisions.md` D7, the residue is documented and bounded.
+
 ## [0.1.0] — 2026-05-20
 
 First public preview. Feature-complete for the 7-step conductor flow,

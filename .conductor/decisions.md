@@ -100,7 +100,7 @@ Anchored to: docs/REVIEW.md (audit output), v0.1.0 tag (immutable), discussions/
 ## 2026-05-20T01:10:00Z — D7: CR-4 privacy leak found in shipped state (immediate patch + system fix)
 Git: main @ 33ee21f (post Phase 9, pre v0.1.1)
 
-Context: empirical user finding — STATE.json/brief.json write raw cwd paths, leaking the Linux username (`xtrzy`) to any public repo where the target plugin commits `.conductor/`. v0.1.0 of THIS repo also shipped the leak: `.conductor/discoveries.md` line 8 + `docs/REVIEW.md` line 112 both contained the raw path. Commit body of `113dd82` (Phase 7 dogfood findings) also contains it.
+Context: empirical user finding — STATE.json/brief.json write raw cwd paths, leaking the developer's local username to any public repo where the target plugin commits `.conductor/`. v0.1.0 of THIS repo also shipped the leak: `.conductor/discoveries.md` line 8 + `docs/REVIEW.md` line 112 both contained the raw path. Commit body of `113dd82` (Phase 7 dogfood findings) also contains it.
 
 Options considered:
 1. Force-push to rewrite git history (clean repo)

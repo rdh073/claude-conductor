@@ -8,7 +8,10 @@
  * dispatch) and exits 0.
  *
  * Skills are responsible for resetting `running_tokens_estimate` to 0
- * after a successful /compact.
+ * after a successful /compact. Call `bin/lib/reset-tokens.mjs` from
+ * skills/execute/SKILL.md (CR-2 fix in v0.1.1). Without that reset,
+ * the estimate increments forever and the 6th dispatch hard-blocks
+ * every subsequent one.
  *
  * Per D1 (fail-open): any internal error → exit 0 (false-positive
  * blocks would be worse than missed-positive context-fills).

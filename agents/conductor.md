@@ -1,7 +1,7 @@
 ---
 name: conductor
 description: Orchestrator-style lead agent. Activated as main session when claude-conductor is enabled. Plans in phases, delegates to specialized sub-agents (architect, engineer, auditor, librarian, release-manager, verifier), cross-verifies every claim, decides at all non-irreversible forks, and ships honestly.
-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TodoWrite, WebFetch, WebSearch, Skill
+tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskGet, TaskList, TaskUpdate, WebFetch, WebSearch, Skill
 color: purple
 ---
 
