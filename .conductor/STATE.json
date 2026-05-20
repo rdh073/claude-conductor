@@ -1,22 +1,22 @@
 {
   "_purpose": "Meta-state for claude-conductor's own development (not a runtime artifact). Tracks audit counts and version state across phases.",
   "plugin_name": "conductor",
-  "plugin_version": "0.1.2",
-  "tag": "v0.1.2",
-  "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.2",
-  "phase": "v0.1.2_shipped",
-  "last_updated": "2026-05-20T02:10:00Z",
+  "plugin_version": "0.1.3",
+  "tag": "v0.1.3",
+  "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.3",
+  "phase": "v0.1.3_shipped",
+  "last_updated": "2026-05-20T02:45:00Z",
   "audit": {
-    "ran_at": "2026-05-20T01:50:00Z (carried from v0.1.1 inline re-audit) + CR-5 closed inline at v0.1.2",
-    "method": "inline (deterministic file checks + 3 integration tests)",
+    "ran_at": "2026-05-20T01:50:00Z (carried from v0.1.1 inline re-audit) + CR-5 supersession at v0.1.3",
+    "method": "inline (deterministic file checks + 14 integration tests)",
     "audit_count_critical": 0,
     "audit_count_warning": 5,
     "audit_count_nit": 8,
     "audit_count_strength": 10,
-    "audit_overall_grade": "B- / B (carried from v0.1.1; CR-5 close maintains zero-critical)",
+    "audit_overall_grade": "B / B+ (carried + small bump from CR-5 supersession + new tests)",
     "audit_per_layer": {
       "A_architecture": "A-",
-      "B_implementation": "B+",
+      "B_implementation": "A- (was B+, bumped by auto-detect + 14-test suite)",
       "C_documentation": "B-",
       "D_meta_consistency": "C-"
     },
@@ -27,16 +27,20 @@
   },
   "prior_releases": [
     { "version": "0.1.0", "tag": "v0.1.0", "audit_count_critical_at_release": 3, "all_crs_fixed_in_v0_1_1": true },
-    { "version": "0.1.1", "tag": "v0.1.1", "audit_count_critical_at_release": 0, "cr5_fixed_in_v0_1_2": true }
+    { "version": "0.1.1", "tag": "v0.1.1", "audit_count_critical_at_release": 0, "cr5_fixed_in_v0_1_2": true },
+    { "version": "0.1.2", "tag": "v0.1.2", "cr5_approach": "bump-default-to-1M", "superseded_by": "v0.1.3 auto-detect" }
   ],
-  "next_session_priority": "v0.1.3 — role-aware PER_DISPATCH estimator (W-7, prerequisite: verify tool_input.subagent_type on PreToolUse), OR Layer E auditor amendment (v0.2.0 design work), OR DISC-3 community runtime test ingestion",
+  "invariants": [
+    "D9: tag-immutability — three consecutive applications (D7, D8, D9), promoted from rule to invariant"
+  ],
+  "next_session_priority": "v0.1.4 — role-aware PER_DISPATCH estimator (W-7, prerequisite: verify tool_input.subagent_type on PreToolUse hook input), OR Layer E auditor amendment (v0.2.0), OR DISC-3 community runtime test ingestion. Recommend STOP after v0.1.3 ship; v0.1.4 fresh session with restored tokens.",
   "v1x_unblock_conditions": [
     "DISC-3: at least 1 community-runner TEST_PROTOCOL pass documented",
     "Layer D meta-grade reaches B+ or A- (requires v0.X.Y built via /conductor:start against itself)",
-    "5 v0.1.0 warnings + 8 nits batched into v0.1.3 / v0.2.0",
+    "5 v0.1.0 warnings + 8 nits batched into v0.1.4 / v0.2.0",
     "Phase 1 unshipped bin scripts implemented",
     "CI workflow added",
-    "Role-aware PER_DISPATCH estimator (W-7 from v0.1.2)",
-    "Auditor Layer E — Environmental variance amendment (DISC-11 follow-up)"
+    "Role-aware PER_DISPATCH estimator (W-7 → v0.1.4)",
+    "Auditor Layer E — Environmental variance amendment (DISC-11 follow-up, v0.2.0)"
   ]
 }
