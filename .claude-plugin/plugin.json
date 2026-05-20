@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "conductor",
+  "displayName": "Claude Conductor",
+  "description": "Orchestrator-style Claude Code plugin: you describe a goal, Claude leads from spec to ship with minimal interrupts.",
+  "version": "0.1.0",
+  "author": {
+    "name": "rdh073",
+    "url": "https://github.com/rdh073"
+  },
+  "homepage": "https://github.com/rdh073/claude-conductor",
+  "repository": "https://github.com/rdh073/claude-conductor",
+  "license": "MIT",
+  "keywords": [
+    "agent",
+    "orchestrator",
+    "autonomous",
+    "boomerang",
+    "planning",
+    "release",
+    "meta-plugin",
+    "self-directed",
+    "workflow"
+  ]
+}
