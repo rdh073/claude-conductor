@@ -1,37 +1,42 @@
 {
   "_purpose": "Meta-state for claude-conductor's own development (not a runtime artifact). Tracks audit counts and version state across phases.",
   "plugin_name": "conductor",
-  "plugin_version": "0.1.0",
-  "tag": "v0.1.0",
-  "tag_commit": "ffd2cf9",
-  "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.0",
-  "phase": "post_audit_v0.1.0",
-  "last_updated": "2026-05-20T01:05:00Z",
+  "plugin_version": "0.1.1",
+  "tag": "v0.1.1",
+  "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.1",
+  "phase": "v0.1.1_shipped",
+  "last_updated": "2026-05-20T01:55:00Z",
   "audit": {
-    "ran_at": "2026-05-20T00:57:44Z",
-    "git_sha": "ffd2cf9",
-    "auditor": "general-purpose sub-agent briefed with agents/auditor.md role",
-    "audit_count_critical": 3,
-    "audit_count_warning": 6,
+    "ran_at": "2026-05-20T01:50:00Z",
+    "method": "inline (per DISC-5 heuristic — deterministic file checks)",
+    "audit_count_critical": 0,
+    "audit_count_warning": 5,
     "audit_count_nit": 8,
-    "audit_count_strength": 8,
-    "audit_overall_grade": "C+ / B-",
+    "audit_count_strength": 10,
+    "audit_overall_grade": "B- / B",
     "audit_per_layer": {
-      "A_architecture": "B+",
-      "B_implementation": "B-",
-      "C_documentation": "C+",
+      "A_architecture": "A-",
+      "B_implementation": "B+",
+      "C_documentation": "B-",
       "D_meta_consistency": "C-"
     },
-    "recommendation": "ship-with-known-gaps",
-    "blocks_phase_10_marketplace": true,
+    "recommendation": "ship",
+    "blocks_phase_10_marketplace": false,
     "blocks_v1x_promotion": true,
-    "review_path": "docs/REVIEW.md",
-    "auditor_sub_agent_token_spend": 182879
+    "review_path": "docs/REVIEW.md"
   },
-  "next_session_priority": "v0.1.1 patch — CR-1 (TodoWrite → Task*), CR-2 (token-guard reset), CR-3 (auditor frontmatter Write), plus 6 W from docs/REVIEW.md and the 4 already-tracked dogfood DISCs (DISC-1, DISC-2, DISC-3 follow-up, DISC-5)",
-  "v0_1_1_unblock_conditions": [
-    "CR-1, CR-2, CR-3 resolved (all three are surgical: find/replace tool names, add reset helper, add Write to one whitelist)",
-    "Audit re-run shows critical = 0",
-    "Marketplace submission can proceed"
+  "prior_release": {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "audit_count_critical_at_release": 3,
+    "all_3_crs_fixed_in_v0_1_1": true
+  },
+  "next_session_priority": "DISC-3 runtime test (community-runner TEST_PROTOCOL passes) + bootstrap paradox closure (run /conductor:start --target ./claude-conductor for v0.1.2)",
+  "v1x_unblock_conditions": [
+    "DISC-3: at least 1 community-runner TEST_PROTOCOL pass documented",
+    "Layer D meta-grade reaches B+ or A- (requires v0.1.2 built via /conductor:start against itself)",
+    "5 v0.1.0 warnings + 8 nits batched into v0.1.2",
+    "Phase 1 unshipped bin scripts implemented (verify-github, conductor-init, etc.)",
+    "CI workflow added"
   ]
 }
