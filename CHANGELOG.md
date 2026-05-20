@@ -5,6 +5,31 @@ All notable changes to `claude-conductor` are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-05-20
+
+Patch release fixing CR-5 (boomerang-blocking token-guard default for
+Opus 1M users). Single-concern release.
+
+### Fixed
+
+- **CR-5: token-guard default budget incompatible with Opus 1M.** The default `CC_TOKEN_BUDGET=200000` and the flat 30k-per-dispatch estimate combined to hard-block the 6th Agent dispatch when the user's real context was under 10%. This self-defeated the boomerang loop for the exact users (power, long-context) most likely to drive complex projects through the plugin. Discovered empirically by a user during the v0.1.1 patch session — same failure class as CR-4 (privacy leak): user-facing usage exposes assumptions baked into defaults.
+
+### Changed
+
+- **`CC_TOKEN_BUDGET` default bumped 200000 → 1000000.** Matches Opus 1M long-context subscriptions. Sonnet/Haiku users on 200k context now explicitly opt down with `export CC_TOKEN_BUDGET=200000`. Inverse of the prior default — the common case for power users no longer requires env vars.
+
+### Added
+
+- **`CC_TOKEN_BUDGET_DISABLED=1` escape hatch.** Checked at module load, before any state read. Power users managing context manually or debugging dispatch flows can opt out entirely.
+- **`tests/lib/token-budget.test.mjs`** — 3 integration tests covering the escape hatch, the new 1M default (CR-5 reproducer fix), and the Sonnet opt-down path. All pass.
+- **README "Power users — Opus 1M context" section** documenting both env vars + the deferred role-aware estimator.
+- **`docs/REVIEW.md` CR-5 + DISC-11 entries.** DISC-11 names the pattern: empirical user testing surfaces assumption bugs that auditor cannot find from within the same context. Proposes "Layer E — Environmental variance" for future auditor.md amendment.
+
+### Known limitations
+
+- **`PER_DISPATCH` still a flat 30k.** Role-aware estimator (verifier ~5k, engineer ~30k, librarian ~80k, etc.) deferred to v0.1.3 — needs verification that `tool_input.subagent_type` is populated in the PreToolUse hook input.
+- All v0.1.1 carry-forward limitations still apply: DISC-3 runtime test gap, W-1 through W-6, N-1 through N-8, 5 unshipped Phase 1 bin scripts, no CI.
+
 ## [0.1.1] — 2026-05-20
 
 Patch release closing the four CRs from the v0.1.0 self-audit

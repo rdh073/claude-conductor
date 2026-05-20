@@ -56,6 +56,27 @@ sanitize. The conductor itself shipped one such leak in v0.1.0 — see
 [CR-4 in docs/REVIEW.md](docs/REVIEW.md) and [decisions.md D7](.conductor/decisions.md)
 for the patch + the residual commit-body note.
 
+## Power users — Opus 1M context
+
+The conductor's default `CC_TOKEN_BUDGET` is **1,000,000 tokens** as
+of v0.1.2, matching Opus 1M long-context subscriptions. If you use a
+200k-context model (Sonnet default, Haiku), explicitly opt down:
+
+```bash
+export CC_TOKEN_BUDGET=200000
+```
+
+To disable the token guard entirely (debug, or you're managing
+context manually):
+
+```bash
+export CC_TOKEN_BUDGET_DISABLED=1
+```
+
+The token-guard's per-dispatch estimator is a flat 30k as of v0.1.2.
+A role-aware estimator (different costs for verifier vs librarian
+etc.) is tracked for v0.1.3 — see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 ## The 7-step flow
 
 1. **Onboard** — 3-5 questions, saved to `./.conductor/brief.json`

@@ -263,3 +263,52 @@ grep -rn "<dev-username>" --exclude-dir=.git .                # 0 hits
 
 **Promote to `latest`?** Not yet. Per CLAUDE.md release discipline: "v1.x and above, latest only when the auditor has signed off and the release notes disclose all known gaps." We're at 0.1.1 — `--prerelease` stays on. Move to `latest` happens when 0.x becomes 1.0 per `docs/ROADMAP.md`'s v1.0 checklist.
 
+
+---
+
+## CR-5 (v0.1.2 fix) — token-guard incompatible with Opus 1M context
+
+**Severity:** CRITICAL (higher than CR-1/2/3/4) — self-defeats the boomerang loop for power users.
+**Found by:** Empirical user testing during the v0.1.1 patch session.
+**File (before fix):** `bin/token-guard.mjs:21` — `const BUDGET = parseInt(process.env.CC_TOKEN_BUDGET || '200000', 10);`.
+
+**Detail:** Default `CC_TOKEN_BUDGET=200000` and the flat 30k-per-dispatch estimate combined to block the 6th Agent dispatch (200000 × 0.8 / 30000 ≈ 5.33). For an Opus 1M context user, real context utilization at dispatch #6 was under 10% — the guard fired against a phantom threshold while massive headroom remained. The boomerang loop was unusable end-to-end for the exact users most likely to drive complex multi-phase projects through the plugin.
+
+**Evidence pre-fix:** Boomerang against any plan with ≥ 6 phases would block at phase #6 verifier-or-engineer dispatch even on a 1M context model with sub-100k real usage.
+
+**Fix in v0.1.2:**
+
+- `bin/token-guard.mjs` — `CC_TOKEN_BUDGET_DISABLED=1` escape hatch checked at module load (before any state read). Default `CC_TOKEN_BUDGET` bumped 200000 → 1000000 to match Opus 1M.
+- `tests/lib/token-budget.test.mjs` — 3 spawn-based integration tests: escape hatch passes at 999999 running, default 1M passes at 180000 running (CR-5 reproducer fix), Sonnet opt-down `CC_TOKEN_BUDGET=200000` with 180000 running still blocks (exit 2). All pass.
+- `README.md` — new "Power users — Opus 1M context" section documents both env vars and the deferred role-aware estimator.
+
+**Deferred to v0.1.3 (new W-7):**
+
+- Role-aware `PER_DISPATCH` estimator (verifier ~5k, engineer ~30k, librarian ~80k, auditor ~15k, release-manager ~10k, architect ~20k). Needs verification that `tool_input.subagent_type` is populated by Claude Code's PreToolUse hook input; current `bin/verifier-dispatch.mjs:43` reads `agent_type || subagent_type || subagent_id`, suggesting the field IS available — but the verifier-dispatch is on SubagentStop, not PreToolUse, so the schema may differ.
+
+**Regression test:** `tests/lib/token-budget.test.mjs` — must continue to pass on every release. Add to a future CI workflow alongside `redact-path.test.mjs`.
+
+---
+
+## DISC-11 — Empirical user testing surfaces structural bugs the audit cannot find
+
+**Date:** 2026-05-20 (v0.1.2 patch session)
+**Source:** CR-4 (privacy leak) and CR-5 (token-guard 200k default) — both found by empirical user usage, NOT by the Phase 9 self-audit.
+**Severity:** META — changes the auditor.md role spec for future audits.
+
+**Pattern:** Phase 9 audit found three logic bugs (CR-1/2/3): tool deprecation drift, missing reset path, tool-whitelist contradiction. All three are inspectable from inside the same context the auditor runs in — read the file, grep for symbols, run `claude --version`, done.
+
+CR-4 and CR-5 are different: they're ASSUMPTION bugs about deployment context. The auditor runs as a sub-agent in the same Claude Code session as the conductor, on the same dev machine, with the same env vars, against the same model. It literally cannot see "what if the user is on Opus 1M instead of Sonnet 200k?" or "what if the user's username is `xtrzy` and they commit `.conductor/` publicly?" — those questions live outside the auditor's process boundary.
+
+**Impact on spec:** `agents/auditor.md` should grow a **"Layer E — Environmental variance"** audit step for future v0.X.0 releases. Sample variants the auditor should explicitly consider:
+
+- `CC_TOKEN_BUDGET ∈ {200000, 1000000}` (Sonnet vs Opus 1M default).
+- Path variants: Linux `/home/<user>`, macOS `/Users/<user>`, Windows `C:\Users\<user>`, UNC `\\?\C:\Users\<user>`.
+- Git: remote configured vs absent, pre-commit hooks present vs absent.
+- Permissions: gh CLI authenticated vs not.
+- Tools deprecation: re-run `claude --version` and consult `/tools-reference` for any prerequisites that may have shifted.
+- Plugin not the user's only one — interactions with other enabled plugins.
+
+**Action for v0.2.0 (or earlier):** amend `agents/auditor.md` to add Layer E. Document an "Environmental variance checklist" the auditor walks deliberately. Tracked in `docs/ROADMAP.md` v0.2.0 themes.
+
+**Why deferred:** Layer E is a real design amendment to the auditor role + the audit deliverable shape. Tail-of-session work in v0.1.2 isn't the right venue. v0.2.0 (or the v0.1.3 patch if community testing produces more variance findings).
