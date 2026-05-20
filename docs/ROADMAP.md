@@ -86,6 +86,91 @@ The reviewer is a new agent (`agents/reviewer.md`) with strictly read-only tools
 - **Token-guard refinement** — role-aware `PER_DISPATCH` estimator (W-7 from v0.1.3) actually lands in v0.1.4 if implementable; otherwise it folds into v0.2.0.
 - **Auditor Layer E — Environmental variance** (DISC-11 follow-up) — sample variants the auditor must consider per audit: model tier (`[1m]` vs not), OS path conventions, git remote present/absent, hook input schema drift.
 
+## v0.3.0 — Mode awareness (feature & bugfix workflows)
+
+### Background
+
+`/conductor:start` in v0.1.x and v0.2.x is **greenfield-optimized**: 5-question onboarding wizard, full discover with web research, multi-phase architect plan, mandatory plan approval. This is the right shape when scaffolding a new project — but overkill when adding a feature to an existing codebase, fixing a bug, or doing routine maintenance.
+
+The empirical finding driving v0.3.0: most real-world work is feature or bugfix, not greenfield. The conductor needs to know which mode it's in and adapt.
+
+### Design — three modes
+
+```
+/conductor:start                       # default = greenfield (current v0.1.x behavior)
+/conductor:start --mode=greenfield     # explicit
+/conductor:start --mode=feature        # NEW v0.3.0
+/conductor:start --mode=bugfix         # NEW v0.3.0
+```
+
+### Mode: greenfield (default — backward-compatible with v0.1.x)
+
+- 5-question onboarding wizard (unchanged).
+- Full discover (librarian dispatch, web research, candidate libraries, benches).
+- Multi-phase architect plan.
+- Mandatory plan approval (gate 2).
+- Execute loop with verifier.
+- Audit + release with honest disclosure → annotated tag + GH Release.
+
+No flag = greenfield. Existing skills and agents don't need behavior changes for this mode — only the dispatch sites learn to read `STATE.json.mode`.
+
+### Mode: feature
+
+- **3-question onboarding** (down from 5):
+  1. What's the feature, in one sentence?
+  2. What constraint(s) matter most? (perf / API stability / no new deps / no breaking changes / etc.)
+  3. Definition of done?
+- **Auto-recon instead of librarian dispatch** — runs inline:
+  - Read `README.md`, manifest (`package.json` / `pyproject.toml` / `Cargo.toml` / etc.), `CONTRIBUTING.md` if present.
+  - `git ls-files | head -200` to enumerate file shape.
+  - Grep for symbols related to the feature description.
+  - Produce a one-page `auto-recon.md`, not a full `research.md`.
+- **Shorter plan** — typically 1–2 phases, since the architecture exists. Acceptance criteria still verifiable; the architect just skips re-deciding stack rationale.
+- **PR delivery (NEW)** — release-manager creates a feature branch + PR with a Conventional Commits scope like `feat(area): …`, NOT a tag + release. The plugin's `/conductor:release` skill auto-detects mode and routes accordingly.
+- Mandatory gates: brief approval + plan approval, just shorter inputs.
+
+### Mode: bugfix
+
+- **Triage step replacing onboard wizard** — 3 questions:
+  1. Repro steps (or a failing test path).
+  2. Expected vs actual.
+  3. Severity / priority.
+- **Reproduce-first (TDD-style)** — the engineer's first commit is a FAILING test that captures the bug. Subsequent commits make the test pass. This is the conductor's stricter discipline than free-form debug.
+- **Focused single-phase plan** — usually "fix + regression test." No discover phase.
+- **PR delivery** with a `fix:` Conventional Commits scope.
+- Mandatory gates: only repro confirmation. Plan approval auto-passes if the plan is a single-phase "fix + test" and the repro is confirmed.
+
+### Implementation footprint
+
+- `skills/start/SKILL.md` — parse `--mode=<value>`, persist to `STATE.json.mode`, route to mode-specific skill flow.
+- `skills/onboard/SKILL.md` — branch on mode (5 / 3 / triage questions).
+- `skills/discover/SKILL.md` — branch on mode (full librarian / auto-recon / skip-for-bugfix).
+- `skills/spec/SKILL.md` — branch on mode (multi-phase / 1–2 phase / single-phase plan templates).
+- `skills/release/SKILL.md` — branch on mode (tag + GH Release / branch + PR).
+- New: `bin/lib/auto-recon.mjs` — file enumeration + manifest reading for feature mode.
+- `agents/architect.md` — in-prompt awareness of mode (no separate agent per mode).
+- `CLAUDE.md` — new "Mode-aware behavior" section.
+- `templates/plan-template.md` — three variants OR a single template with conditional sections.
+
+### What stays invariant across all three modes
+
+- The 3-AND pause-gate condition (irreversible AND non-factual AND no clear technical winner) holds.
+- Sub-agent dispatch contract unchanged.
+- State files in `.conductor/` keep the same shape, with a new `mode` field in `STATE.json` and `brief.json`.
+- Tag-immutability invariant (D9) holds — PR-mode commits also follow it (PR branches can be force-pushed before merge per standard PR convention; merged commits are immutable).
+- Auditor still runs before release. Lighter pass for bugfix (just verify the regression test holds), fuller for feature, full for greenfield.
+
+### Estimated effort
+
+2–3 sessions. Test discipline:
+- Each mode gets a smoke test analogous to Phase 7's hello-world greenfield dogfood.
+- Backward-compat test: existing `/conductor:start` (no flag) produces v0.1.x behavior identically.
+- Mode auto-detection (from `git status` + `git log`) is OUT OF SCOPE for v0.3.0 — explicit `--mode` flag only. Auto-detection is a v0.4.0 stretch if community use surfaces the request.
+
+### Why this is its own minor and not folded into v0.2.0
+
+v0.2.0 ships the reviewer agent + confidence-based routing (per DISC-12). That's a horizontal change touching every decision dispatch. v0.3.0's mode awareness is vertical — different skill flow per mode. Mixing the two would conflate two distinct concerns and complicate the audit. Single-concern releases stay single-concern.
+
 ## v1.0 — API stability
 
 Conditions for v1.0 (checklist, not a date):

@@ -34,6 +34,27 @@ claude
 /conductor:start
 ```
 
+## When to use conductor (and when not to)
+
+### Sweet spot — use the conductor when:
+
+- You're **starting a new project from scratch** (a plugin, CLI, library, microservice). The 5-question onboarding wizard + multi-phase plan + verifier loop earns its weight here.
+- The goal is **shippable**, not exploratory — you want to tag a release at the end, not poke around.
+- Work spans **more than one logical phase** and benefits from delegation + cross-verification.
+- You want a **paper trail** for engineering archeology (`.conductor/decisions.md`, `.conductor/discoveries.md`, `docs/REVIEW.md`).
+
+### Overkill — use raw Claude Code instead when:
+
+- You're **adding a small feature** to an existing codebase. The conductor's onboarding wizard, full discover phase, and multi-phase architect plan are too much. (Until v0.3.0; see below.)
+- You're **chasing a bug** in a few files. Same overhead problem. (Until v0.3.0.)
+- You're **exploring or prototyping**. The conductor wants a clear definition of done; exploration intentionally doesn't have one.
+- You're **refactoring** or doing routine maintenance with no user-facing surface change.
+- You're **answering a question** about the codebase rather than changing it. Use the Explore agent or just ask Claude.
+
+### Coming in v0.3.0 — mode awareness
+
+`/conductor:start --mode=feature` and `--mode=bugfix` will adapt the flow for existing-codebase work: shorter onboarding (3 questions instead of 5), auto-recon of the repo instead of full discover, focused 1–2 phase plan, PR delivery instead of tag-and-release. Until v0.3.0 ships, the table above is the guidance — use raw Claude Code for feature/bugfix work. See [`docs/ROADMAP.md` § v0.3.0](docs/ROADMAP.md) for the full design.
+
 ## Privacy & `.conductor/` directory
 
 When the conductor runs in a target project, it writes state to
@@ -126,11 +147,6 @@ checkpoints/, SESSION-SUMMARY.md._
 ## Resume after Ctrl+C
 
 _TODO: how `/conductor:resume` picks up from the last checkpoint._
-
-## When to use this vs raw Claude Code
-
-_TODO: decision matrix. Raw Claude when you want hands-on control.
-Conductor when you want delegation with verification._
 
 ## License
 
