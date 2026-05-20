@@ -1,0 +1,18 @@
+[
+  {
+    "name": "plan-changes",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/bin/watch-plan.mjs",
+    "description": "Streams ./.conductor/plan.md edits as they happen (architect revisions, phase marks). Event-driven — no heartbeat."
+  },
+  {
+    "name": "ci-status",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/bin/watch-ci.mjs",
+    "description": "Polls `gh run list` for the current branch every 60s; emits ONLY on state transitions (queued → in_progress → success/failure). No heartbeats.",
+    "when": "on-skill-invoke:execute"
+  },
+  {
+    "name": "verifier-events",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/bin/watch-verifier.mjs",
+    "description": "Tails ./.conductor/reports/*.json for new verifier outputs; surfaces verified=false events immediately. Event-driven — no heartbeat."
+  }
+]
