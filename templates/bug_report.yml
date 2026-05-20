@@ -1,0 +1,82 @@
+# Placeholders use {{double-curly}}. Replace at fill-in time.
+# Leave # comments — GitHub strips them at render time.
+
+name: Bug report
+description: File a bug report for {{project}}
+title: "[bug] "
+labels: ["bug", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in every
+        required section. If a field doesn't apply, write `n/a` — that
+        also tells us you considered it.
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: "{{project}} version"
+      description: "Output of `gh release view` or the `version` field in `plugin.json`."
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows (native)
+        - Windows (WSL)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: "Output of `node --version`."
+      placeholder: "v20.10.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: "Numbered steps. The smaller the repro, the faster the fix."
+      placeholder: |
+        1. Run `claude --plugin-dir ./my-plugin`
+        2. Type `/conductor:start`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      placeholder: |
+        Expected: ...
+        Actual:   ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: state
+    attributes:
+      label: ".conductor/STATE.json snippet"
+      description: "Paste the relevant excerpt. Redact secrets if any."
+      render: json
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "stderr output, hook output, anything Claude printed."
+      render: shell
