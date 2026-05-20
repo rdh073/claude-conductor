@@ -56,26 +56,46 @@ sanitize. The conductor itself shipped one such leak in v0.1.0 — see
 [CR-4 in docs/REVIEW.md](docs/REVIEW.md) and [decisions.md D7](.conductor/decisions.md)
 for the patch + the residual commit-body note.
 
-## Power users — Opus 1M context
+## Power users — context budget
 
-The conductor's default `CC_TOKEN_BUDGET` is **1,000,000 tokens** as
-of v0.1.2, matching Opus 1M long-context subscriptions. If you use a
-200k-context model (Sonnet default, Haiku), explicitly opt down:
+As of **v0.1.3**, the conductor's `bin/token-guard.mjs` auto-detects
+your model's context budget from the PreToolUse hook's `model` field.
+No env vars needed for either tier.
 
-```bash
-export CC_TOKEN_BUDGET=200000
+**Auto-detection rules:**
+
+| Model ID pattern | Budget |
+| :--- | :--- |
+| `claude-*[1m]` (e.g. `claude-opus-4-7[1m]`) — Opus 1M tier | 1,000,000 |
+| `claude-*` (no `[1m]` suffix) — Sonnet, Haiku, base Opus | 200,000 |
+
+**Override priority (highest to lowest):**
+
+1. `CC_TOKEN_BUDGET_DISABLED=1` — bypass token-guard entirely (escape hatch for manual context management or debugging).
+2. `CC_TOKEN_BUDGET=<n>` — explicit budget in tokens.
+3. Auto-detected from the `model` field in PreToolUse hook stdin.
+4. Fallback **200,000** — fail-closed-visible default.
+
+The fallback is intentionally conservative: if auto-detection fails
+(no stdin, missing `model` field, malformed JSON), the guard assumes
+a 200k context. This produces a visible block message with a clear
+env-var override path — better than a silent miss against a real
+context wall.
+
+**Troubleshooting** — set `CC_TOKEN_GUARD_DEBUG=1` to see budget
+source on stderr:
+
+```
+[token-guard] budget=1000000 source=model:claude-opus-4-7[1m]
+[token-guard] budget=200000 source=fallback-default
+[token-guard] budget=500000 source=env:CC_TOKEN_BUDGET=500000
 ```
 
-To disable the token guard entirely (debug, or you're managing
-context manually):
+The disabled state stays silent — the escape hatch is invisible.
 
-```bash
-export CC_TOKEN_BUDGET_DISABLED=1
-```
-
-The token-guard's per-dispatch estimator is a flat 30k as of v0.1.2.
-A role-aware estimator (different costs for verifier vs librarian
-etc.) is tracked for v0.1.3 — see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+The per-dispatch estimator is a flat 30k as of v0.1.3. Role-aware
+estimator (verifier ~5k, librarian ~80k, etc.) tracked for v0.1.4 —
+see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## The 7-step flow
 

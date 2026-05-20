@@ -129,10 +129,36 @@ Chosen: Option 2
 
 Reason: v0.1.2 release was published, Discussion #1 comment posted, three-tag-prerelease-pattern already established. Force-undo would invalidate v0.1.2 SHA + GH Release URL + Discussion message link — visible cost to anyone who already viewed the release. Per D7 precedent: residual commit/tag leaks are documented and bounded; the forward path is sealed.
 
-Sanitization: line 301 of docs/REVIEW.md rewritten — `xtrzy` removed from the concrete-example phrasing, replaced with a generic descriptor that conveys the same point ("what if the user's username appears in a path field of a committed state file?").
+Sanitization: line 301 of docs/REVIEW.md rewritten — the literal developer username removed from the concrete-example phrasing, replaced with a generic descriptor that conveys the same point ("what if the user's username appears in a path field of a committed state file?").
 
 Lesson for future writing about CR-4-class issues: NEVER use a real username in examples, even in security-fix narratives. Use `alice`, `<dev-username>`, or "the user's local username" as default placeholders. Already applied in tests/ via the alice convention; now applied to REVIEW.md narratives.
 
 Reversibility: locked-in for the v0.1.2 tag's REVIEW.md content. Forward main is clean.
 
 Anchored to: this commit, docs/REVIEW.md line 301, the cleanup-pattern for future writers
+
+---
+
+## 2026-05-20T02:30:00Z — D9: tag-immutability is an INVARIANT, not a per-decision question
+Git: main @ 39e5b0f (post-v0.1.2 sweep, pre-v0.1.3)
+
+Context: D7 (v0.1.0 commit-body leak in 113dd82) + D8 (v0.1.2 latent narrative leak in REVIEW.md line 301) + this v0.1.3-eve question ("force-undo v0.1.2 for the auto-detect refinement?") all hit the same gate three times in a row. The choice is no longer ambiguous — it's a stable pattern.
+
+Three applications, same answer, same reasoning:
+- D7: v0.1.0 commit body contains the raw path → patch forward, accept commit-body residue, document.
+- D8: v0.1.2 REVIEW.md narrative names the dev username → patch forward, accept tag residue, document.
+- D9 (this one): v0.1.2 ships bump-default-to-1M; empirical follow-up shows auto-detect from hook `model` is strictly better → DO NOT force-undo v0.1.2; ship auto-detect as v0.1.3.
+
+The invariant:
+
+**Tags are immutable. Mistakes get a new tag, not a force-push.**
+
+Originally stated in CLAUDE.md § Release discipline as one rule among many. After three consecutive applications without exception, promoting to "invariant" — future sessions don't re-litigate this gate. Hitting it means: ship the next tag.
+
+This isn't new policy. It's recognizing that the pattern is stable enough to lift out of per-decision deliberation. Anyone reading decisions.md hitting this question for a fourth time should not be re-evaluating; they should be running `git tag -a v0.X.Y` for the next slot.
+
+Caveat: the invariant CAN be revisited if a force-push truly becomes the only safe action (legal/security mandate to scrub a leaked secret from git history with no other mitigation). The bar is "no other option exists," not "the next tag would be cleaner."
+
+Reversibility: this lift can itself be reversed if a future situation demonstrates that the invariant is too strict. Currently no such situation has surfaced.
+
+Anchored to: D7, D8; CLAUDE.md § Release discipline already states the rule; .conductor/discoveries.md DISC-11 documents the related "writing about a privacy leak names the leak" pattern that drives D8.

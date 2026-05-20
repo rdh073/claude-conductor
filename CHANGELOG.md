@@ -5,6 +5,38 @@ All notable changes to `claude-conductor` are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-05-20
+
+Single-concern patch superseding v0.1.2's CR-5 fix with a strictly-better auto-detect approach. Empirical follow-up: the PreToolUse hook input includes a `model` field with `[1m]` suffix for Opus 1M tier — token-guard can read this directly and pick the right budget per-call without env vars.
+
+### Changed
+
+- **CR-5 supersession** — `bin/token-guard.mjs` no longer bumps the default to 1M. It now follows a 4-layer priority chain:
+  1. `CC_TOKEN_BUDGET_DISABLED=1` (escape hatch, carried from v0.1.2)
+  2. `CC_TOKEN_BUDGET=<n>` (explicit env override, carried)
+  3. **Auto-detect** from stdin `model` (NEW): `/\[1m\]$/` → 1,000,000, else if model present → 200,000
+  4. Fallback **200,000** (CHANGED from v0.1.2's 1M default — fail-closed-visible vs fail-open-silent)
+
+- The fallback flip is intentional: a Sonnet/Haiku 200k user with no env vars now gets visible block messages at their actual 160k threshold instead of fail-silently running past a 1M phantom threshold. v0.1.2's bump-default was conservative-too-permissive; v0.1.3 is conservative-correct.
+
+### Added
+
+- **`CC_TOKEN_GUARD_DEBUG=1`** — when set, token-guard writes one line to stderr: `[token-guard] budget=N source=...`. Three documented `source` values: `env:CC_TOKEN_BUDGET=N`, `model:<id>`, `fallback-default`. The disabled state stays silent — the escape hatch is invisible by design.
+- **`tests/lib/token-budget.test.mjs`** rewritten with **7 integration tests** (up from 3 in v0.1.2): escape hatch, env override pass + block at exact 80% boundary, auto-detect 1M with debug assertion, auto-detect 200k tier with stdout source attribution, fallback with debug, fail-safe on malformed JSON with debug. Full suite (7 redact + 7 token-budget = 14) green.
+- **README "Power users — context budget"** section rewritten to document the 4-layer priority + `CC_TOKEN_GUARD_DEBUG` troubleshooting flag.
+- **D9 in `.conductor/decisions.md`** — tag-immutability promoted from a per-decision rule to an INVARIANT after three consecutive applications (D7, D8, D9). Future sessions hitting this gate don't re-litigate.
+
+### Documented
+
+- **`docs/REVIEW.md`** carries a CR-5 supersession section explaining why auto-detect is strictly better than bump-default + the per-scenario comparison matrix + the v0.1.2-history-preserved framing.
+- DISC-11 in `.conductor/discoveries.md` (carried from v0.1.2) gets a "two-in-a-row exhibit" framing — CR-5's bump-default looked correct from inside audit context; auto-detect was only discoverable from outside (empirical Opus 1M usage). Strengthens the case for the v0.2.0 "Layer E — Environmental variance" auditor amendment.
+
+### Known limitations
+
+- **`PER_DISPATCH` still flat 30k.** Role-aware estimator (verifier ~5k, librarian ~80k, etc.) deferred to **v0.1.4** (slid by one minor since v0.1.3 was absorbed by CR-5 supersession).
+- **Hook input schema assumption** — v0.1.3 trusts that PreToolUse hook input contains the `model` field. Empirically verified on Claude Code v2.1.144. If a future version changes the schema, the guard falls through to fail-safe 200k (Test 7 covers this case).
+- All v0.1.1/v0.1.2 carry-forwards: DISC-3 runtime gap, W-1/2/3/4/6, N-1 through N-8, 5 unshipped Phase 1 bin scripts, no CI, Layer D bootstrap paradox.
+
 ## [0.1.2] — 2026-05-20
 
 Patch release fixing CR-5 (boomerang-blocking token-guard default for

@@ -9,70 +9,138 @@ import { tmpdir } from 'node:os';
 const here = dirname(fileURLToPath(import.meta.url));
 const tokenGuard = join(here, '..', '..', 'bin', 'token-guard.mjs');
 
-function setupState({ running, extra = {} }) {
+function setupState({ running }) {
   const dir = mkdtempSync(join(tmpdir(), 'tg-test-'));
   mkdirSync(join(dir, '.conductor'), { recursive: true });
-  const state = { running_tokens_estimate: running, ...extra };
-  writeFileSync(join(dir, '.conductor', 'STATE.json'), JSON.stringify(state));
+  writeFileSync(
+    join(dir, '.conductor', 'STATE.json'),
+    JSON.stringify({ running_tokens_estimate: running })
+  );
   return dir;
 }
 
-function runGuard(projectDir, envOverride = {}) {
-  // Build a clean env without parent CC_TOKEN_* so tests are deterministic.
+function runGuard(projectDir, opts = {}) {
+  // Build a clean env so tests are deterministic regardless of parent state.
   const env = { ...process.env };
   delete env.CC_TOKEN_BUDGET;
   delete env.CC_TOKEN_BUDGET_DISABLED;
+  delete env.CC_TOKEN_GUARD_DEBUG;
   return spawnSync('node', [tokenGuard], {
-    env: { ...env, CLAUDE_PROJECT_DIR: projectDir, ...envOverride },
+    env: { ...env, CLAUDE_PROJECT_DIR: projectDir, ...(opts.env || {}) },
+    // Always pipe stdin (empty by default) so process.stdin.isTTY === false
+    // and readStdin() returns deterministically.
+    input: opts.stdin ?? '',
     encoding: 'utf8',
   });
 }
 
-test('CC_TOKEN_BUDGET_DISABLED=1 bypasses the guard even at 999999 running', () => {
+test('Layer 1 — CC_TOKEN_BUDGET_DISABLED=1 bypasses guard regardless of running', () => {
   const dir = setupState({ running: 999_999 });
   try {
-    const r = runGuard(dir, { CC_TOKEN_BUDGET_DISABLED: '1' });
+    const r = runGuard(dir, { env: { CC_TOKEN_BUDGET_DISABLED: '1' } });
     assert.equal(
       r.status,
       0,
-      `expected exit 0 (escape hatch), got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
+      `expected exit 0 (escape hatch); got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('CR-5 reproducer fix: default 1M budget passes at 180000 running', () => {
-  // Default CC_TOKEN_BUDGET is 1000000 (v0.1.2). 0.8 threshold = 800000.
-  // 180000 << 800000 → pass.
-  const dir = setupState({ running: 180_000 });
+test('Layer 2 — CC_TOKEN_BUDGET=500000 with 399999 running passes (just under 80%)', () => {
+  // threshold = 0.8 * 500000 = 400000; 399999 < 400000 → pass
+  const dir = setupState({ running: 399_999 });
   try {
-    const r = runGuard(dir);
+    const r = runGuard(dir, { env: { CC_TOKEN_BUDGET: '500000' } });
     assert.equal(
       r.status,
       0,
-      `expected exit 0 at 180k/1M default, got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
+      `expected exit 0; got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('Sonnet opt-down still works: CC_TOKEN_BUDGET=200000 with 180k blocks', () => {
-  // Explicit opt-down to 200k for Sonnet/Haiku users; 0.8 threshold = 160000.
-  // 180000 >= 160000 → BLOCK exit 2.
-  const dir = setupState({ running: 180_000 });
+test('Layer 2 — CC_TOKEN_BUDGET=500000 with 400000 running BLOCKS (at 80% boundary)', () => {
+  // threshold = 400000; 400000 >= 400000 → BLOCK
+  const dir = setupState({ running: 400_000 });
   try {
-    const r = runGuard(dir, { CC_TOKEN_BUDGET: '200000' });
+    const r = runGuard(dir, { env: { CC_TOKEN_BUDGET: '500000' } });
     assert.equal(
       r.status,
       2,
-      `expected exit 2 (BLOCK), got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
+      `expected exit 2 (BLOCK at boundary); got ${r.status}\nstdout: ${r.stdout}`
     );
+    assert.match(r.stdout, /Token budget hit/, 'block message on stdout');
+    assert.match(r.stdout, /Source: env:CC_TOKEN_BUDGET=500000/, 'source attribution in message');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Layer 3 — auto-detect Opus [1m] from stdin → 1M budget, 180k passes', () => {
+  // threshold = 0.8 * 1000000 = 800000; 180000 << 800000 → pass
+  const dir = setupState({ running: 180_000 });
+  try {
+    const r = runGuard(dir, {
+      stdin: JSON.stringify({ model: 'claude-opus-4-7[1m]' }),
+      env: { CC_TOKEN_GUARD_DEBUG: '1' },
+    });
+    assert.equal(r.status, 0, `expected exit 0; stdout: ${r.stdout}`);
     assert.match(
-      r.stdout,
-      /Token budget hit/,
-      'block message should be on stdout'
+      r.stderr,
+      /\[token-guard\] budget=1000000 source=model:claude-opus-4-7\[1m\]/,
+      'debug log should show auto-detected 1M budget'
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Layer 3 — auto-detect non-[1m] model from stdin → 200k budget, 180k BLOCKS', () => {
+  // threshold = 0.8 * 200000 = 160000; 180000 >= 160000 → BLOCK
+  const dir = setupState({ running: 180_000 });
+  try {
+    const r = runGuard(dir, {
+      stdin: JSON.stringify({ model: 'claude-sonnet-4-6' }),
+    });
+    assert.equal(r.status, 2, `expected exit 2; got ${r.status}\nstdout: ${r.stdout}`);
+    assert.match(r.stdout, /Token budget hit/);
+    assert.match(r.stdout, /Source: model:claude-sonnet-4-6/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Layer 4 — no stdin (empty pipe), 180k BLOCKS via fallback 200k', () => {
+  const dir = setupState({ running: 180_000 });
+  try {
+    const r = runGuard(dir, { env: { CC_TOKEN_GUARD_DEBUG: '1' } });
+    assert.equal(r.status, 2, `expected exit 2; got ${r.status}\nstdout: ${r.stdout}`);
+    assert.match(
+      r.stderr,
+      /\[token-guard\] budget=200000 source=fallback-default/,
+      'debug log should show fallback source'
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Layer 4 — malformed stdin JSON → fail-safe fallback 200k, 180k BLOCKS', () => {
+  const dir = setupState({ running: 180_000 });
+  try {
+    const r = runGuard(dir, {
+      stdin: '{{ this is not valid json',
+      env: { CC_TOKEN_GUARD_DEBUG: '1' },
+    });
+    assert.equal(r.status, 2, `expected exit 2 (fail-safe); got ${r.status}\nstdout: ${r.stdout}`);
+    assert.match(
+      r.stderr,
+      /\[token-guard\] budget=200000 source=fallback-default/,
+      'malformed JSON should fall through to fallback-default'
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });

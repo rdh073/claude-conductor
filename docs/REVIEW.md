@@ -312,3 +312,51 @@ CR-4 and CR-5 are different: they're ASSUMPTION bugs about deployment context. T
 **Action for v0.2.0 (or earlier):** amend `agents/auditor.md` to add Layer E. Document an "Environmental variance checklist" the auditor walks deliberately. Tracked in `docs/ROADMAP.md` v0.2.0 themes.
 
 **Why deferred:** Layer E is a real design amendment to the auditor role + the audit deliverable shape. Tail-of-session work in v0.1.2 isn't the right venue. v0.2.0 (or the v0.1.3 patch if community testing produces more variance findings).
+
+---
+
+## CR-5 supersession (v0.1.3) — auto-detect supersedes bump-default
+
+v0.1.2 closed CR-5 by bumping the default `CC_TOKEN_BUDGET` from 200000 → 1000000 and adding the `CC_TOKEN_BUDGET_DISABLED=1` escape hatch. That fix unblocked Opus 1M users immediately but introduced an asymmetric fail-mode for Sonnet/Haiku 200k users: the guard could never fire against their actual context (1M budget × 0.8 = 800k threshold >> real 200k context wall).
+
+**Empirical follow-up finding (post-v0.1.2 ship):** the PreToolUse hook input includes a `model` field. The Opus 1M tier emits the model ID with a `[1m]` suffix (e.g. `claude-opus-4-7[1m]`); 200k tier emits no suffix. Token-guard can AUTO-DETECT the correct budget per-call without env vars.
+
+**v0.1.3 supersedes v0.1.2's fix** with a 4-layer priority chain in `bin/token-guard.mjs`:
+
+1. `CC_TOKEN_BUDGET_DISABLED=1` (carried from v0.1.2 — hard escape, silent exit 0)
+2. `CC_TOKEN_BUDGET=<n>` (carried — explicit env override)
+3. **Auto-detect** from stdin `model` (NEW): `/\[1m\]$/` → 1,000,000, else if model present → 200,000
+4. Fallback **200000** (CHANGED from v0.1.2's 1M default — fail-closed-visible vs fail-open-silent)
+
+**Why the change matters:**
+
+| Scenario | v0.1.2 default (bumped) | v0.1.3 auto-detect |
+| :--- | :--- | :--- |
+| Opus 1M, no env vars | 1M budget ✓ | 1M budget ✓ |
+| Sonnet/Haiku, no env vars | 1M budget — **never blocks, hits real 200k wall silently** | 200k budget — blocks at 160k with override path printed |
+| Mixed-tier team | each member must set env var | works without coordination |
+| Future tiers (e.g. 2M) | bump default again | extend regex once |
+
+**Regression coverage:** 7 integration tests in `tests/lib/token-budget.test.mjs` (up from 3 in v0.1.2):
+
+- Layer 1 — `CC_TOKEN_BUDGET_DISABLED=1` bypasses everything (running=999999 → exit 0)
+- Layer 2 — `CC_TOKEN_BUDGET=500000` with 399999 running passes (just under 80%)
+- Layer 2 — `CC_TOKEN_BUDGET=500000` with 400000 running BLOCKS (at exact 80% boundary, `>=` semantics)
+- Layer 3 — stdin `model: claude-opus-4-7[1m]` + 180000 running passes (auto 1M)
+- Layer 3 — stdin `model: claude-sonnet-4-6` + 180000 running BLOCKS (auto 200k)
+- Layer 4 — empty stdin + 180000 running BLOCKS via fallback 200k
+- Layer 4 — malformed stdin JSON + 180000 running BLOCKS via fallback (fail-safe)
+
+All 7 pass; full suite (7 redact + 7 token-budget = 14) green.
+
+**New debug flag:** `CC_TOKEN_GUARD_DEBUG=1` writes `[token-guard] budget=N source=...` to stderr. Three documented `source` values:
+
+- `env:CC_TOKEN_BUDGET=<n>` (user explicit override)
+- `model:<id>` (auto-detect succeeded)
+- `fallback-default` (auto-detect failed or no model field)
+
+The disabled state stays silent — the escape hatch is invisible by design.
+
+**v0.1.2's CR-5 entry above is historical** — the bump-default approach worked for Opus 1M but the auto-detect approach is strictly more correct. v0.1.2 tag stays at `a0012c6` per the D9 immutability invariant; v0.1.3 inherits and supersedes.
+
+**DISC-11 unchanged.** The empirical pattern (user testing surfaces assumption bugs the auditor cannot probe from inside the same context) holds. CR-5 is now its **two-in-a-row exhibit**: v0.1.2's bump-default looked correct from inside the audit context; the auto-detect refinement was only discoverable from outside (empirical Opus 1M usage). Strengthens the case for the v0.2.0 "Layer E — Environmental variance" auditor amendment.
