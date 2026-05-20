@@ -1,0 +1,44 @@
+# claude-conductor feature request
+
+name: Feature request
+description: Suggest an enhancement to claude-conductor
+title: "[feat] "
+labels: ["enhancement", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd love to hear it. Describe the problem first,
+        then the solution — it's easier to course-correct on a well-framed
+        problem than on a half-baked solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: "What are you trying to do that's currently hard or impossible?"
+      placeholder: "When I try to ..., the conductor ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: "How do you imagine this would work?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Other approaches you've thought about and why they fell short."
+
+  - type: checkboxes
+    id: contrib
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be willing to send a PR for this

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/rdh073/claude-conductor/discussions
+    about: For questions, ideas, or just sharing what you built.
+  - name: 🔒 Security advisory
+    url: https://github.com/rdh073/claude-conductor/security/advisories/new
+    about: Report a vulnerability privately (do NOT file a public issue).

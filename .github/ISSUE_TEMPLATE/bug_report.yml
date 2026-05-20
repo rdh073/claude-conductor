@@ -1,0 +1,87 @@
+# claude-conductor bug report (forms-based, not blank markdown)
+
+name: Bug report
+description: File a bug report for claude-conductor
+title: "[bug] "
+labels: ["bug", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in every
+        required section. If a field doesn't apply, write `n/a` — that
+        also tells us you considered it.
+
+  - type: input
+    id: conductor-version
+    attributes:
+      label: claude-conductor version
+      description: "From `plugin.json` or `gh release view -R rdh073/claude-conductor`."
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows (native)
+        - Windows (WSL)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: "Output of `node --version`."
+      placeholder: "v20.10.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: target-plugin
+    attributes:
+      label: Target plugin you were building (if any)
+      description: "What were you trying to ship when this bug hit? URL, repo name, or short description."
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: "Numbered steps. The smaller the repro, the faster the fix."
+      placeholder: |
+        1. Run `claude --plugin-dir /path/to/claude-conductor`
+        2. Type `/conductor:start`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      placeholder: |
+        Expected: ...
+        Actual:   ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: state
+    attributes:
+      label: ".conductor/STATE.json snippet"
+      description: "Paste the relevant excerpt. Redact secrets if any."
+      render: json
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "stderr output, hook output, anything Claude printed."
+      render: shell
