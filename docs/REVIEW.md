@@ -298,7 +298,7 @@ grep -rn "<dev-username>" --exclude-dir=.git .                # 0 hits
 
 **Pattern:** Phase 9 audit found three logic bugs (CR-1/2/3): tool deprecation drift, missing reset path, tool-whitelist contradiction. All three are inspectable from inside the same context the auditor runs in — read the file, grep for symbols, run `claude --version`, done.
 
-CR-4 and CR-5 are different: they're ASSUMPTION bugs about deployment context. The auditor runs as a sub-agent in the same Claude Code session as the conductor, on the same dev machine, with the same env vars, against the same model. It literally cannot see "what if the user is on Opus 1M instead of Sonnet 200k?" or "what if the user's username is `xtrzy` and they commit `.conductor/` publicly?" — those questions live outside the auditor's process boundary.
+CR-4 and CR-5 are different: they're ASSUMPTION bugs about deployment context. The auditor runs as a sub-agent in the same Claude Code session as the conductor, on the same dev machine, with the same env vars, against the same model. It literally cannot see "what if the user is on Opus 1M instead of Sonnet 200k?" or "what if the user's username appears in a path field of a committed state file?" — those questions live outside the auditor's process boundary.
 
 **Impact on spec:** `agents/auditor.md` should grow a **"Layer E — Environmental variance"** audit step for future v0.X.0 releases. Sample variants the auditor should explicitly consider:
 

@@ -113,3 +113,26 @@ Reason: Force-pushing rewrites SHAs other tools may have cached (Claude Code ins
 Reversibility: locked-in (no force-push) — but the leak surface is bounded to commit `113dd82` body. Future v0.1.1 patches close the leak in shipped state files.
 
 Anchored to: this commit (D7), v0.1.1 release notes, README.md privacy section to be added
+
+---
+
+## 2026-05-20T02:15:00Z — D8: Sweep latent CR-4 regression in CR-5/DISC-11 narrative
+Git: main @ a0012c6 (post v0.1.2 tag, pre cleanup commit)
+
+Context: v0.1.2's docs/REVIEW.md DISC-11 section used the developer's actual username as a CONCRETE EXAMPLE of "a username variant the auditor cannot test." Writing about the leak named the leak — same failure class as the original D7 narrative which had to be rewritten in v0.1.1. The v0.1.2 tag (`a0012c6`) now contains the latent leak in REVIEW.md line 301.
+
+Options considered:
+1. Force-undo v0.1.2 tag, sanitize, re-tag
+2. Sanitize on main going forward, accept the leak in the v0.1.2 tag as residue (same D7 pattern)
+
+Chosen: Option 2
+
+Reason: v0.1.2 release was published, Discussion #1 comment posted, three-tag-prerelease-pattern already established. Force-undo would invalidate v0.1.2 SHA + GH Release URL + Discussion message link — visible cost to anyone who already viewed the release. Per D7 precedent: residual commit/tag leaks are documented and bounded; the forward path is sealed.
+
+Sanitization: line 301 of docs/REVIEW.md rewritten — `xtrzy` removed from the concrete-example phrasing, replaced with a generic descriptor that conveys the same point ("what if the user's username appears in a path field of a committed state file?").
+
+Lesson for future writing about CR-4-class issues: NEVER use a real username in examples, even in security-fix narratives. Use `alice`, `<dev-username>`, or "the user's local username" as default placeholders. Already applied in tests/ via the alice convention; now applied to REVIEW.md narratives.
+
+Reversibility: locked-in for the v0.1.2 tag's REVIEW.md content. Forward main is clean.
+
+Anchored to: this commit, docs/REVIEW.md line 301, the cleanup-pattern for future writers
