@@ -5,7 +5,8 @@
   "tag": "v0.1.0",
   "tag_commit": "ffd2cf9",
   "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.0",
-  "last_updated": "2026-05-20T01:00:00Z",
+  "phase": "post_audit_v0.1.0",
+  "last_updated": "2026-05-20T01:05:00Z",
   "audit": {
     "ran_at": "2026-05-20T00:57:44Z",
     "git_sha": "ffd2cf9",
@@ -27,5 +28,10 @@
     "review_path": "docs/REVIEW.md",
     "auditor_sub_agent_token_spend": 182879
   },
-  "next_phase": "v0.1.1 patch (do not advance to Phase 10 marketplace until CR-1/2/3 resolved)"
+  "next_session_priority": "v0.1.1 patch — CR-1 (TodoWrite → Task*), CR-2 (token-guard reset), CR-3 (auditor frontmatter Write), plus 6 W from docs/REVIEW.md and the 4 already-tracked dogfood DISCs (DISC-1, DISC-2, DISC-3 follow-up, DISC-5)",
+  "v0_1_1_unblock_conditions": [
+    "CR-1, CR-2, CR-3 resolved (all three are surgical: find/replace tool names, add reset helper, add Write to one whitelist)",
+    "Audit re-run shows critical = 0",
+    "Marketplace submission can proceed"
+  ]
 }

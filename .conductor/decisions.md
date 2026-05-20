@@ -77,3 +77,20 @@ Reason: User wrote `"when": {"phase": ["execute", "release"]}` for ci-status. Pe
 ## 2026-05-19T23:56:00Z — SC4: PostToolUse `--no-verify` for the log-commit hook
 Git: no-repo
 Reason: User explicitly wrote `--no-verify` in the spec for the auto-commit hook. This is normally an anti-pattern (skips pre-commit hooks). Honored here because: (a) it's an automated audit-trail commit, not a user commit, (b) the user's project may have pre-commit hooks that conflict with .conductor/*.md writes, (c) the user explicitly requested it. Documented so future readers don't strip it.
+
+---
+
+## 2026-05-20T01:00:00Z — D6: Defer v0.1.1 patch to a fresh session
+Git: main @ 58b8a49 (post Phase 9 self-audit)
+
+Options considered:
+- Patch CR-1/2/3 + 6 W now in the tail of this session
+- Stop at v0.1.0 + post-audit; v0.1.1 patches in a fresh session
+
+Chosen: Option 2 (stop)
+
+Reason: This session is already substantial (~6 phases of substantial work + 1 sub-agent dispatch worth 182k tokens for the audit alone). Patching mid-session would either require `/compact` (violating the conductor's own discipline of not rushing tail-of-session work) or risk token-budget hit. Plus: a fresh session lets the v0.1.1 patch be driven by `/conductor:start --target ./claude-conductor` AGAINST itself — finally closing Layer D's meta-grade gap. The CR severity is "ship-with-known-gaps" not "block-release"; no urgency. Community-runners may surface additional issues via TEST_PROTOCOL that batch better with the audit fixes.
+
+Reversibility: N/A (decision affects when patches land, not whether)
+
+Anchored to: docs/REVIEW.md (audit output), v0.1.0 tag (immutable), discussions/1 (community advisory)

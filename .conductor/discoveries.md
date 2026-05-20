@@ -169,3 +169,51 @@ Non-actions (strengths to preserve):
 - engineer.md role (DISC-4)
 - auditor.md role (DISC-6)
 - 3-AND pause-gate logic (DISC-7)
+
+---
+
+## DISC-8 — the auditor found a bug in itself (and survived)
+
+**Date:** 2026-05-20T01:00:00Z
+**Source:** Phase 9 self-audit
+**Severity:** POSITIVE — pattern self-validates
+
+**Finding:** CR-3 in `docs/REVIEW.md` is the auditor pointing out that `agents/auditor.md` declares `tools: Read, Glob, Grep, Bash` but the body instructs "Write `docs/REVIEW.md`". The auditor sub-agent, briefed with the exact auditor.md role, found this contradiction in its own spec — and reported it without flinching, even though the contradiction technically made the auditor unable to produce its primary output (mitigated only because we dispatched via general-purpose with full tools, not as a strict plugin sub-agent).
+
+**Why it matters:** Self-finding works. The auditor is not just a critic of others' code — its role is sufficient to critique its own role spec. Future audits should explicitly include "audit the auditor" as a step (similar to how the verifier doesn't auto-verify the verifier in `bin/verifier-dispatch.mjs`).
+
+**Impact on spec:** No change to the audit pattern itself. v0.1.1 will fix CR-3, which closes the loop.
+
+---
+
+## DISC-9 — Phase 9 changed v0.1.1 priority order
+
+**Date:** 2026-05-20T01:00:00Z
+**Source:** Phase 9 self-audit
+**Severity:** ROUTING — changes v0.1.1 scope
+
+**Finding:** Pre-audit v0.1.1 priorities were the 4 dogfood DISCs + 4 Phase 1 spec scripts. Post-audit, the priority order shifts: CR-1/2/3 jump to the top (must-fix), DISC-* slide to mid-priority (correctness improvements), Phase 1 unshipped scripts stay where they were.
+
+**Impact on spec:** `docs/ROADMAP.md` was updated to reflect this — CR section appears first under v0.1.1.
+
+**Action:** None beyond the ROADMAP edit. Future audits should expect to re-prioritize the next minor's backlog.
+
+---
+
+## DISC-10 — Layer D's C- grade is a bootstrap paradox, not a defect
+
+**Date:** 2026-05-20T01:00:00Z
+**Source:** Phase 9 self-audit, layer D grading
+**Severity:** META — naming a known constraint
+
+**Finding:** The auditor graded Layer D (Self-consistency / meta) at C-, citing that the conductor's own build did not produce a `brief.json`, `plan.md`, `STATE.json`, `checkpoints/`, `reports/`, or `SESSION-SUMMARY.md` at the conductor repo. The CHANGELOG's "built using its own pattern" claim is therefore overstated.
+
+**Why it's not strictly a defect:** This is a chicken-and-egg constraint. The conductor cannot eat its own dogfood on its OWN build before v0.1.0 exists. v0.1.0 IS the very thing that allows `/conductor:start --target ./claude-conductor` to work. Layer D's grade reflects that the v0.1.0 build was a mega-prompt phase-by-phase walk, not a `/conductor:start` driven flow.
+
+**Why we still graded it C-:** Honest pre-existing claim ("built using its own pattern") was too strong for what actually happened.
+
+**Impact on spec:** Two things:
+1. The CHANGELOG entry needs a softer claim. v0.1.1 should rewrite "built using its own pattern" to "designed by extracting the pattern from a prior plugin build (clip-forge), with v0.1.1 onward built using `/conductor:start --target ./claude-conductor`."
+2. The conductor's own .conductor/ directory should eventually contain the full state file set after v0.1.1's first dogfood-against-itself run.
+
+**Action for v0.1.1:** Run `/conductor:start --target ./claude-conductor` as the v0.1.1 work itself. Layer D grade in the v0.1.1 self-audit should rise to A- or B+. If it does, the bootstrap paradox is closed.
