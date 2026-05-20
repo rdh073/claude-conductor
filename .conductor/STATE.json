@@ -1,0 +1,31 @@
+{
+  "_purpose": "Meta-state for claude-conductor's own development (not a runtime artifact). Tracks audit counts and version state across phases.",
+  "plugin_name": "conductor",
+  "plugin_version": "0.1.0",
+  "tag": "v0.1.0",
+  "tag_commit": "ffd2cf9",
+  "tag_url": "https://github.com/rdh073/claude-conductor/releases/tag/v0.1.0",
+  "last_updated": "2026-05-20T01:00:00Z",
+  "audit": {
+    "ran_at": "2026-05-20T00:57:44Z",
+    "git_sha": "ffd2cf9",
+    "auditor": "general-purpose sub-agent briefed with agents/auditor.md role",
+    "audit_count_critical": 3,
+    "audit_count_warning": 6,
+    "audit_count_nit": 8,
+    "audit_count_strength": 8,
+    "audit_overall_grade": "C+ / B-",
+    "audit_per_layer": {
+      "A_architecture": "B+",
+      "B_implementation": "B-",
+      "C_documentation": "C+",
+      "D_meta_consistency": "C-"
+    },
+    "recommendation": "ship-with-known-gaps",
+    "blocks_phase_10_marketplace": true,
+    "blocks_v1x_promotion": true,
+    "review_path": "docs/REVIEW.md",
+    "auditor_sub_agent_token_spend": 182879
+  },
+  "next_phase": "v0.1.1 patch (do not advance to Phase 10 marketplace until CR-1/2/3 resolved)"
+}
