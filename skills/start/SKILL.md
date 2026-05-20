@@ -1,7 +1,7 @@
 ---
 description: Begin the full conductor flow on this project. Runs Onboard → Discover → Spec → Execute → Audit → Release → Report. Pauses only at the two mandatory gates (onboard answers, plan approval) and at irreversible decisions per the 3-AND condition.
 disable-model-invocation: true
-argument-hint: "[--autonomy full|guarded|review] [--reset]"
+argument-hint: "[--autonomy full|guarded|review] [--reset] (--mode=feature|bugfix in v0.3.0)"
 allowed-tools: Skill Read Write Bash TaskCreate TaskGet TaskList TaskUpdate AskUserQuestion
 ---
 
